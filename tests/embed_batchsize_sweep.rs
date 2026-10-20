@@ -1,5 +1,5 @@
 // Batch-size bisection for the forward_batched corruption. Reproduces the exact
-// len-64 entities that corrupted in the truth probe (bucket=1 salt=131+j) and
+// len-64 entities that corrupted in the truth probe (bucket=1 seed=131+j) and
 // sweeps batch size N, reporting worst cosine vs single-forward ground truth.
 // Goal: find the N at which forward_batched starts diverging from forward.
 //   cargo test --features metal --release --test embed_batchsize_sweep -- --nocapture
@@ -15,12 +15,12 @@ fn probe_model_dir() -> String {
     std::env::var("KIN_INFER_PROBE_MODEL_DIR").unwrap_or_else(|_| MODEL_DIR.to_string())
 }
 
-fn synth(len: usize, salt: u32) -> (Vec<u32>, Vec<u32>) {
+fn synth(len: usize, seed: u32) -> (Vec<u32>, Vec<u32>) {
     let ids: Vec<u32> = (0..len)
         .map(|i| {
             1 + ((i as u32)
                 .wrapping_mul(2654435761)
-                .wrapping_add(salt.wrapping_mul(40503))
+                .wrapping_add(seed.wrapping_mul(40503))
                 % 20000)
         })
         .collect();
@@ -63,7 +63,7 @@ fn batchsize_sweep() {
     let model = BertModel::load(&dir.join("model.safetensors"), config).expect("load");
     eprintln!("backend={}", model.backend());
 
-    // len 64 = truth-probe bucket index 1, salt = 1*131 + j (exact corrupting entities).
+    // len 64 = truth-probe bucket index 1, seed = 1*131 + j (exact corrupting entities).
     const LEN: usize = 64;
     let ns = [1usize, 2, 3, 4, 6, 8, 12, 16, 20, 24, 32, 48, 64, 100];
     let maxn = *ns.iter().max().unwrap();
